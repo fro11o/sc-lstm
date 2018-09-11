@@ -29,7 +29,7 @@ def get_args():
     # lstm
     parser.add_argument("--dim_hidden", type=int, default=32,
                         help="state size of hidden state in LSTM")
-    parser.add_argument("--max_length", type=int, default=8,
+    parser.add_argument("--max_length", type=int, default=16,
                         help="max length in caption sequence")
     parser.add_argument("--dim_wordvec", type=int, default=32,
                         help="dimension of word vector")
@@ -73,12 +73,6 @@ def gen_data(n_data, n_class, max_length):
             caption.append("<END>")
         for j, w in enumerate(caption):
             captions[i,j] = word_to_index[w]
-        """
-        print(objects)
-        print(controls[i])
-        print(caption)
-        print(captions[i])
-        """
 
     targets = np.zeros((n_data * max_length, len(word_to_index)))
     targets[np.arange(n_data * max_length), captions.reshape(-1)] = 1
@@ -190,22 +184,16 @@ def main():
         n_word = len(word_to_index)
         preds = y_pred[:,:,:n_word]
         controls = y_pred[:,:,n_word:]
-        print(type(preds))
         xent = -K.sum(y_true[:,:,:n_word] * K.log(preds + 1e-9))
-        print(xent)
         reg1 = K.sum(K.abs(controls[:,-1,:]))
-        print(reg1)
-        t = K.sum(K.abs(controls[:,:,1:] - controls[:,:,:-1]), axis=-1)
+        t = K.sum(K.abs(controls[:,1:,:] - controls[:,:-1,:]), axis=-1)
         reg2 = K.sum(args.eta * (args.xi ** t))
-        print(reg2)
-        #return xent + reg1 + reg2
-        return xent
+        return xent + reg1 + reg2
 
     model_train.summary()
 
     init_h = np.zeros((n_data, args.dim_hidden))
     init_c = np.zeros((n_data, args.dim_hidden))
-    sclstm_loss(targets, targets)
     model_train.compile(optimizer='adam', loss=sclstm_loss)
     model_train.fit(x=[captions, init_h, init_c, controls],
             y=[true_y], epochs=200)
@@ -224,18 +212,14 @@ def main():
         for i in range(args.max_length):
             dec_output_inf, dec_h_inf, dec_c_inf, dec_d_inf = model_inf.predict(
                     x=[tmp_caption, prev_h, prev_c, prev_control])
-            print(tmp_caption)
-            print(prev_h)
-            print(prev_c)
-            print(prev_control)
+            print("prev_control", prev_control)
+            print("next_control", dec_d_inf)
             prev_h = dec_h_inf
             prev_c = dec_c_inf
             prev_control = dec_d_inf
-            print("dec_output_inf.shape", dec_output_inf.shape)
-            print(dec_output_inf[0,0])
             idx = np.argmax(dec_output_inf[0,0])
             tmp_caption[0,0] = idx
-            print("idx", idx)
+            print("word", index_to_word[idx])
             res.append(index_to_word[idx])
             if idx == word_to_index["<END>"]:
                 break
