@@ -207,16 +207,16 @@ def main():
         tmp_caption[0,0] = word_to_index["<START>"]
         prev_h = np.zeros((1, args.dim_hidden,))
         prev_c = np.zeros((1, args.dim_hidden,))
-        prev_control = tmp_control
+        prev_d = tmp_control
         res = []
         for i in range(args.max_length):
             dec_output_inf, dec_h_inf, dec_c_inf, dec_d_inf = model_inf.predict(
-                    x=[tmp_caption, prev_h, prev_c, prev_control])
-            print("prev_control", prev_control)
+                    x=[tmp_caption, prev_h, prev_c, prev_d])
+            print("prev_control", prev_d)
             print("next_control", dec_d_inf)
             prev_h = dec_h_inf
             prev_c = dec_c_inf
-            prev_control = dec_d_inf
+            prev_d = dec_d_inf
             idx = np.argmax(dec_output_inf[0,0])
             tmp_caption[0,0] = idx
             print("word", index_to_word[idx])
